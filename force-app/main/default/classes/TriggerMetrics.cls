@@ -1,5 +1,6 @@
 public class TriggerMetrics {
     private static final String METRIC_PREFIX = 'TRIGGER_METRIC';
+    @TestVisible
     private static Map<String, MetricSnapshot> metricSnapshots = new Map<String, MetricSnapshot>();
     private static Boolean isEnabled = false;
 

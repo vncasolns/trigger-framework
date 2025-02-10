@@ -54,15 +54,26 @@ public class TriggerContext {
             this.isExecuting = false;
 
             this.recordIds = new Set<Id>();
-            for (SObject record : Trigger.new) {
-                this.recordIds.add(record.Id);
+            if (this.isDelete) {
+                if (Trigger.old != null) {
+                    for (SObject record : Trigger.old) {
+                        this.recordIds.add(record.Id);
+                    }
+                }
+            } else if (Trigger.new != null) {
+                for (SObject record : Trigger.new) {
+                    this.recordIds.add(record.Id);
+                }
             }
+            this.size = this.recordIds.size();
         } else {
             this.oldList = oldList;
             this.newList = newList;
             this.oldMap = oldMap;
             this.newMap = newMap;
             this.isExecuting = isExecuting;
+
+            this.size = newList != null ? newList.size() : oldList != null ? oldList.size() : 0;
 
             this.recordIds = (this.isInsert ||
                 this.isUpdate ||

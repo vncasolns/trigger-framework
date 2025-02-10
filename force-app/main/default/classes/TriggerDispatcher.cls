@@ -4,7 +4,6 @@
 
 public with sharing class TriggerDispatcher {
     @TestVisible
-    private static Map<String, List<TriggerFeature__mdt>> mockControlsMap = new Map<String, List<TriggerFeature__mdt>>();
     private static Map<String, List<TriggerFeature__mdt>> cachedControlsMap = new Map<String, List<TriggerFeature__mdt>>();
 
     public static void run(Schema.SObjectType sObjectType) {
@@ -19,7 +18,6 @@ public with sharing class TriggerDispatcher {
                 try {
                     ITriggerExecutable handler = initializeHandlerFromName(control.Handler__c);
                     if (handler != null) {
-
                         String operation = syncContext.operation.name();
 
                         if (TriggerMetrics.isMetricsEnabled()) {
@@ -36,7 +34,15 @@ public with sharing class TriggerDispatcher {
                             if (asyncContext == null) {
                                 asyncContext = createTriggerContext(true);
                             }
-                            System.enqueueJob(new AsynchronousFeatureExecution(handler, asyncContext, control.Handler__c, operation, sObjectName));
+                            System.enqueueJob(
+                                new AsynchronousFeatureExecution(
+                                    handler,
+                                    asyncContext,
+                                    control.Handler__c,
+                                    operation,
+                                    sObjectName
+                                )
+                            );
                         } else {
                             handler.execute(syncContext);
                         }
@@ -44,7 +50,6 @@ public with sharing class TriggerDispatcher {
                         if (TriggerMetrics.isMetricsEnabled()) {
                             TriggerMetrics.endMetrics(control.Handler__c, operation, sObjectName);
                         }
-
                     }
                 } catch (Exception e) {
                     System.debug(LoggingLevel.ERROR, 'Error in TriggerDispatcher: ' + e.getMessage());
@@ -54,6 +59,7 @@ public with sharing class TriggerDispatcher {
         }
     }
 
+    @TestVisible
     private static ITriggerExecutable initializeHandlerFromName(String handlerName) {
         if (String.isNotBlank(handlerName)) {
             try {
@@ -119,6 +125,7 @@ public with sharing class TriggerDispatcher {
         );
     }
 
+    @TestVisible
     private static Boolean isOperationEnabled(TriggerFeature__mdt control, TriggerOperation operation) {
         switch on operation {
             when BEFORE_INSERT {
@@ -149,12 +156,8 @@ public with sharing class TriggerDispatcher {
     }
 
     private static List<TriggerFeature__mdt> getControls(String sObjectName) {
-        if (Test.isRunningTest() && mockControlsMap.containsKey(sObjectName)) {
-            return mockControlsMap.get(sObjectName);
-        }
-
-        if (cachedControlsMap.isEmpty()) {
-            List<TriggerFeature__mdt> allFeatures = [
+        if (!cachedControlsMap.containsKey(sObjectName)) {
+            List<TriggerFeature__mdt> features = [
                 SELECT
                     DeveloperName,
                     Handler__c,
@@ -172,27 +175,21 @@ public with sharing class TriggerDispatcher {
                     BypassPermission__c,
                     RequiredPermission__c
                 FROM TriggerFeature__mdt
-                ORDER BY SObjectName__c, LoadOrder__c ASC
+                WHERE SObjectName__c = :sObjectName AND IsActive__c = TRUE
+                ORDER BY LoadOrder__c ASC
             ];
-
-            for (TriggerFeature__mdt feature : allFeatures) {
-                if (!cachedControlsMap.containsKey(feature.SObjectName__c)) {
-                    cachedControlsMap.put(feature.SObjectName__c, new List<TriggerFeature__mdt>());
-                }
-                cachedControlsMap.get(feature.SObjectName__c).add(feature);
-            }
+            cachedControlsMap.put(sObjectName, features);
         }
 
-        return cachedControlsMap.containsKey(sObjectName)
-            ? cachedControlsMap.get(sObjectName)
-            : new List<TriggerFeature__mdt>();
+        return cachedControlsMap.get(sObjectName);
     }
 
     @TestVisible
     private static void setMockControls(String sObjectName, List<TriggerFeature__mdt> mockControls) {
-        mockControlsMap.put(sObjectName, mockControls);
+        cachedControlsMap.put(sObjectName, mockControls);
     }
 
+    @TestVisible
     private class AsynchronousFeatureExecution implements System.Queueable {
         private ITriggerExecutable handler;
         private TriggerContext context;
@@ -200,14 +197,20 @@ public with sharing class TriggerDispatcher {
         private String operation;
         private String sObjectName;
 
-        private AsynchronousFeatureExecution(ITriggerExecutable handler, TriggerContext context, String handlerName, String operation, String sObjectName) {
+        @TestVisible
+        private AsynchronousFeatureExecution(
+            ITriggerExecutable handler,
+            TriggerContext context,
+            String handlerName,
+            String operation,
+            String sObjectName
+        ) {
             this.handler = handler;
             this.context = context;
             this.handlerName = handlerName;
             this.operation = operation;
             this.sObjectName = sObjectName;
         }
-
 
         public void execute(System.QueueableContext qc) {
             if (TriggerMetrics.isMetricsEnabled()) {

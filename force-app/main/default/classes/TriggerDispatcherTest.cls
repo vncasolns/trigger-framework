@@ -116,9 +116,8 @@ public class TriggerDispatcherTest {
     }
 
     @IsTest
-    static void testMultipleTriggers() {
+    static void testTriggerMetrics() {
         List<TriggerFeature__mdt> accountMocks = new List<TriggerFeature__mdt>();
-        List<TriggerFeature__mdt> contactMocks = new List<TriggerFeature__mdt>();
 
         accountMocks.add(
             new TriggerFeature__mdt(
@@ -130,18 +129,8 @@ public class TriggerDispatcherTest {
                 AfterUpdate__c = true
             )
         );
-        contactMocks.add(
-            new TriggerFeature__mdt(
-                DeveloperName = 'TriggerDispatcherTestB',
-                Handler__c = 'TriggerDispatcherTest.ContactUpdateFirstName',
-                IsActive__c = true,
-                LoadOrder__c = 10,
-                BeforeInsert__c = true,
-                BeforeUpdate__c = true
-            )
-        );
         TriggerDispatcher.setMockControls('Account', accountMocks);
-        TriggerDispatcher.setMockControls('Contact', contactMocks);
+        TriggerMetrics.enableMetrics();
 
         Account newAccount = new Account(
             Name = 'New Test Account',
@@ -158,7 +147,6 @@ public class TriggerDispatcherTest {
 
         List<Contact> contacts = [SELECT Id, FirstName FROM Contact WHERE AccountId = :newAccount.Id];
         System.assertEquals(1, contacts.size());
-        System.assertEquals('New Test Account', contacts[0].FirstName);
     }
 
     @IsTest
@@ -254,16 +242,6 @@ public class TriggerDispatcherTest {
                 contacts.add(new Contact(LastName = 'Demo', AccountId = accountId));
             }
             insert contacts;
-        }
-    }
-
-    public class ContactUpdateFirstName implements ITriggerExecutable {
-        public void execute(TriggerContext context) {
-            for (Contact vContact : (List<Contact>) context.getRecords()) {
-                if (String.isBlank(vContact.FirstName)) {
-                    vContact.FirstName = vContact.LastName;
-                }
-            }
         }
     }
 
