@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>SObjectName__c</fullName>
-    <description>The name of the object the class should act on, for example, Account, Contact, Opportunity.</description>
+    <description>API name of the SObject this trigger feature applies to.</description>
     <externalId>false</externalId>
     <fieldManageability>DeveloperControlled</fieldManageability>
-    <inlineHelpText>Set the SObject where the handler is executed. The SObject must implement a trigger that calls the framework.</inlineHelpText>
+    <inlineHelpText>Enter the Salesforce object&apos;s API name (e.g., &apos;Account&apos;, &apos;CustomObject__c&apos;)</inlineHelpText>
     <label>SObject Name</label>
     <length>255</length>
     <required>true</required>
